@@ -1,0 +1,14 @@
+# Terraform / Terragrunt
+.terraform/
+*.tfstate
+*.tfstate.backup
+*.tfvars
+.terraform.lock.hcl
+.terragrunt-cache/
+
+# OS
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
