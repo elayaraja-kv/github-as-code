@@ -2,6 +2,10 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
+locals {
+  common_vars = read_terragrunt_config(find_in_parent_folders("_env.hcl"))
+}
+
 terraform {
   source = "${get_repo_root()}/modules/org-secrets"
 }
@@ -17,13 +21,16 @@ terraform {
 # }
 
 inputs = {
-  org_secrets = {
-    # "ORG_DEPLOY_TOKEN" = {
-    #   value      = get_env("TF_VAR_org_deploy_token", "")
-    #   visibility = "selected"
-    #   selected_repository_ids = [
-    #     dependency.my_repo.outputs.repo_id,
-    #   ]
-    # }
-  }
+  gcp_project      = local.common_vars.locals.gcp_project
+  gcp_secrets_name = "github-org-secrets-ause2" # GCP SM secret containing JSON: {"SECRET_NAME": "value", ...}
+
+  # Optional: override visibility or restrict to specific repos per secret.
+  # org_secrets = {
+  #   "ORG_DEPLOY_TOKEN" = {
+  #     visibility = "selected"
+  #     selected_repository_ids = [
+  #       dependency.my_repo.outputs.repo_id,
+  #     ]
+  #   }
+  # }
 }

@@ -15,9 +15,9 @@ inputs = {
   description            = "Infrastructure as Code - Terraform and Terragrunt configurations for managing cloud infrastructure"
   visibility             = "public"
   has_issues             = true
-  has_discussions         = false
-  has_projects            = true
-  has_wiki                = false
+  has_discussions        = false
+  has_projects           = true
+  has_wiki               = false
   auto_init              = false
   allow_merge_commit     = true
   allow_squash_merge     = true
@@ -29,8 +29,8 @@ inputs = {
     "main" = {
       enforce_admins = true
       required_reviews = {
-        approving_count      = 0
-        require_code_owners  = true
+        approving_count     = 0
+        require_code_owners = true
       }
     }
   }
