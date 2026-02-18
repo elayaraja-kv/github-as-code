@@ -1,0 +1,6 @@
+# Default owner for all files
+* @elayaraja-kv
+
+# Org-level changes require extra attention
+environments/org/ @elayaraja-kv
+modules/ @elayaraja-kv

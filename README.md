@@ -183,8 +183,10 @@ Reusable Terraform modules live in `modules/`. Each environment unit references 
 
 GitHub Actions workflow (`.github/workflows/terragrunt.yml`) automates:
 
-- **On PR:** runs `terragrunt run-all plan` and posts the output as a PR comment
-- **On merge to main:** runs `terragrunt run-all apply` automatically
+- **Change detection:** only runs plan/apply for units with changes (not all units)
+- **On PR:** runs `terragrunt plan` per changed unit and posts each plan as a PR comment
+- **On merge to main:** runs `terragrunt apply` per changed unit
+- **Shared changes:** if `modules/`, `root.hcl`, or `_env.hcl` are modified, all units run
 
 ### Required GitHub Secrets
 

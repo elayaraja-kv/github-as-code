@@ -1,0 +1,25 @@
+name: PR Title Check
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+
+jobs:
+  check-title:
+    name: Validate PR Title
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check PR title format
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          # Must start with a ticket ID like ABC-123 or ABC123
+          if [[ ! "$TITLE" =~ ^[A-Z]+-[0-9]+:?\  ]]; then
+            echo "::error::PR title must start with a ticket ID (e.g. 'ABC-123: Add new repo')"
+            echo ""
+            echo "Expected format: <TICKET-ID>: <description>"
+            echo "Examples:"
+            echo "  ABC-123: Add new repository for analytics service"
+            echo "  INFRA-42: Update branch protection rules"
+            exit 1
+          fi
+          echo "PR title format is valid: $TITLE"
