@@ -16,7 +16,6 @@ variable "org_secrets" {
     - visibility: "all", "private", or "selected"
     - selected_repository_ids: list of repo IDs (when visibility is "selected")
   EOT
-  type      = map(any)
-  default   = {}
-  sensitive = true
+  type    = map(any)
+  default = {}
 }
