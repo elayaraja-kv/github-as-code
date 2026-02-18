@@ -17,9 +17,79 @@ env:
   TERRAFORM_VERSION: "1.9.0"
 
 jobs:
-  terragrunt:
-    name: Terragrunt
+  detect-changes:
+    name: Detect Changed Units
     runs-on: ubuntu-latest
+    outputs:
+      units: ${{ steps.changed.outputs.units }}
+      has_changes: ${{ steps.changed.outputs.has_changes }}
+      modules_changed: ${{ steps.changed.outputs.modules_changed }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect changed Terragrunt units
+        id: changed
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE_SHA="${{ github.event.before }}"
+          fi
+
+          CHANGED_FILES=$(git diff --name-only "$BASE_SHA" HEAD)
+
+          # If modules/ or root.hcl changed, run all units
+          MODULES_CHANGED="false"
+          if echo "$CHANGED_FILES" | grep -qE '^(modules/|root\.hcl|environments/_env\.hcl)'; then
+            MODULES_CHANGED="true"
+          fi
+          echo "modules_changed=$MODULES_CHANGED" >> "$GITHUB_OUTPUT"
+
+          # Find changed environment units (directories containing terragrunt.hcl)
+          UNITS="[]"
+          if [ "$MODULES_CHANGED" = "true" ]; then
+            # All units need to run
+            UNITS=$(find environments -name "terragrunt.hcl" -not -path "*/.terragrunt-cache/*" | xargs -I{} dirname {} | sort -u | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          else
+            # Only changed units
+            UNIT_DIRS=$(echo "$CHANGED_FILES" | grep '^environments/' | while read -r f; do
+              dir=$(dirname "$f")
+              # Walk up to find the nearest terragrunt.hcl
+              while [ "$dir" != "environments" ] && [ "$dir" != "." ]; do
+                if [ -f "$dir/terragrunt.hcl" ]; then
+                  echo "$dir"
+                  break
+                fi
+                dir=$(dirname "$dir")
+              done
+            done | sort -u)
+
+            if [ -n "$UNIT_DIRS" ]; then
+              UNITS=$(echo "$UNIT_DIRS" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+            fi
+          fi
+
+          echo "units=$UNITS" >> "$GITHUB_OUTPUT"
+          if [ "$UNITS" = "[]" ]; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+          fi
+
+          echo "Changed units: $UNITS"
+
+  terragrunt:
+    name: "Terragrunt (${{ matrix.unit }})"
+    needs: detect-changes
+    if: needs.detect-changes.outputs.has_changes == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        unit: ${{ fromJson(needs.detect-changes.outputs.units) }}
 
     steps:
       - name: Checkout
@@ -37,19 +107,18 @@ jobs:
           chmod +x terragrunt
           sudo mv terragrunt /usr/local/bin/
 
-      - name: Terragrunt Format Check
-        working-directory: environments
-        run: terragrunt hclfmt --check
+      - name: Terragrunt Init
+        working-directory: ${{ matrix.unit }}
+        run: terragrunt init --terragrunt-non-interactive
 
       - name: Terragrunt Validate
-        working-directory: environments
-        run: terragrunt run-all validate --terragrunt-non-interactive
+        working-directory: ${{ matrix.unit }}
+        run: terragrunt validate
 
       - name: Terragrunt Plan
         id: plan
-        if: github.event_name == 'pull_request'
-        working-directory: environments
-        run: terragrunt run-all plan --terragrunt-non-interactive -no-color 2>&1 | tee plan_output.txt
+        working-directory: ${{ matrix.unit }}
+        run: terragrunt plan --terragrunt-non-interactive -no-color 2>&1 | tee plan_output.txt
         continue-on-error: true
 
       - name: Post Plan to PR
@@ -58,12 +127,12 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const planOutput = fs.readFileSync('environments/plan_output.txt', 'utf8');
+            const planOutput = fs.readFileSync('${{ matrix.unit }}/plan_output.txt', 'utf8');
             const truncated = planOutput.length > 60000
               ? planOutput.substring(0, 60000) + '\n\n... (truncated)'
               : planOutput;
 
-            const output = `#### Terragrunt Plan
+            const output = `#### Terragrunt Plan: \`${{ matrix.unit }}\`
             \`\`\`
             ${truncated}
             \`\`\`
@@ -83,5 +152,5 @@ jobs:
 
       - name: Terragrunt Apply
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        working-directory: environments
-        run: terragrunt run-all apply --terragrunt-non-interactive -auto-approve
+        working-directory: ${{ matrix.unit }}
+        run: terragrunt apply --terragrunt-non-interactive -auto-approve
