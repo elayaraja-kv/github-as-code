@@ -29,7 +29,8 @@ inputs = {
     "main" = {
       enforce_admins = true
       required_reviews = {
-        approving_count = 0
+        approving_count      = 0
+        require_code_owners  = true
       }
     }
   }

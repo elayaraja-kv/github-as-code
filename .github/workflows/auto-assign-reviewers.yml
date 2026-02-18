@@ -1,0 +1,37 @@
+name: Auto Assign Reviewers
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+jobs:
+  assign-reviewers:
+    name: Assign Default Reviewers
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: Request reviewers
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const prAuthor = context.payload.pull_request.user.login;
+
+            // Default individual reviewers — add/remove as needed
+            const defaultReviewers = ['elayaraja-kv'];
+
+            // Default team reviewers (org teams, without the org prefix)
+            const defaultTeamReviewers = ['3es-sre'];
+
+            // Don't request review from the PR author
+            const reviewers = defaultReviewers.filter(r => r !== prAuthor);
+
+            await github.rest.pulls.requestReviewers({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              reviewers: reviewers.length > 0 ? reviewers : undefined,
+              team_reviewers: defaultTeamReviewers
+            });
+
+            console.log(`Assigned reviewers: ${reviewers.join(', ')}`);
+            console.log(`Assigned team reviewers: ${defaultTeamReviewers.join(', ')}`);
