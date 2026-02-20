@@ -96,7 +96,7 @@ mkdir -p environments/personal/repositories/my-existing-repo
 
 # 3. Import into state
 cd environments/personal/repositories/my-existing-repo
-terragrunt import 'github_repository.this' my-existing-repo
+terragrunt import 'github_repository.this[0]' my-existing-repo
 
 # 4. Verify no drift
 terragrunt plan
@@ -126,19 +126,48 @@ terragrunt run-all plan
 terragrunt run-all apply
 ```
 
-### Destroy a single repo (removes from GitHub)
+### Delete a repository from GitHub
+
+All repositories are created with `prevent_destroy = true` by default to guard against accidental deletion. To delete a repo, follow these steps:
+
+**Step 1 — Set `prevent_destroy = false`** in the repo's `terragrunt.hcl`:
+
+```hcl
+inputs = {
+  prevent_destroy = false
+  # ... rest of inputs
+}
+```
+
+**Step 2 — Move state** from the protected resource address to the unprotected one:
 
 ```bash
 cd environments/personal/repositories/my-repo
+terragrunt state mv 'github_repository.this[0]' 'github_repository.unprotected[0]'
+```
+
+**Step 3 — Destroy** the repository:
+
+```bash
 terragrunt destroy
 ```
 
-### Remove a repo from Terraform without deleting it on GitHub
+**Step 4 — Remove the folder** from this repo:
+
+```bash
+cd ../../../../   # back to repo root
+rm -rf environments/personal/repositories/my-repo
+```
+
+### Remove a repo from Terraform state without deleting it on GitHub
+
+Use this when you want to stop managing a repo here but keep it on GitHub.
 
 ```bash
 cd environments/personal/repositories/my-repo
-terragrunt state rm 'github_repository.this'
+terragrunt state rm 'github_repository.this[0]'
 # Then delete the folder
+rm -rf .
 ```
 
 ### View current state for a repo

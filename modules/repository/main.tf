@@ -1,12 +1,20 @@
+# Migrate existing state (no index) to count-based index.
+moved {
+  from = github_repository.this
+  to   = github_repository.this[0]
+}
+
 resource "github_repository" "this" {
+  count = var.prevent_destroy ? 1 : 0
+
   name        = var.name
   description = var.description
   visibility  = var.visibility
 
-  has_issues       = var.has_issues
-  has_discussions   = var.has_discussions
-  has_projects      = var.has_projects
-  has_wiki          = var.has_wiki
+  has_issues      = var.has_issues
+  has_discussions = var.has_discussions
+  has_projects    = var.has_projects
+  has_wiki        = var.has_wiki
 
   auto_init              = var.auto_init
   allow_merge_commit     = var.allow_merge_commit
@@ -31,12 +39,51 @@ resource "github_repository" "this" {
   }
 }
 
+resource "github_repository" "unprotected" {
+  count = var.prevent_destroy ? 0 : 1
+
+  name        = var.name
+  description = var.description
+  visibility  = var.visibility
+
+  has_issues      = var.has_issues
+  has_discussions = var.has_discussions
+  has_projects    = var.has_projects
+  has_wiki        = var.has_wiki
+
+  auto_init              = var.auto_init
+  allow_merge_commit     = var.allow_merge_commit
+  allow_squash_merge     = var.allow_squash_merge
+  allow_rebase_merge     = var.allow_rebase_merge
+  delete_branch_on_merge = var.delete_branch_on_merge
+
+  vulnerability_alerts = var.vulnerability_alerts
+
+  dynamic "pages" {
+    for_each = var.pages != null ? [var.pages] : []
+    content {
+      source {
+        branch = pages.value.branch
+        path   = lookup(pages.value, "path", "/")
+      }
+    }
+  }
+
+  lifecycle {
+    prevent_destroy = false
+  }
+}
+
+locals {
+  repo = var.prevent_destroy ? github_repository.this[0] : github_repository.unprotected[0]
+}
+
 # ─── Branch protection ───────────────────────────────────────────────────────
 
 resource "github_branch_protection" "this" {
   for_each = var.branch_protections
 
-  repository_id = github_repository.this.node_id
+  repository_id = local.repo.node_id
   pattern       = each.key
 
   enforce_admins      = lookup(each.value, "enforce_admins", true)
@@ -66,7 +113,7 @@ resource "github_branch_protection" "this" {
 resource "github_repository_webhook" "this" {
   for_each = var.webhooks
 
-  repository = github_repository.this.name
+  repository = local.repo.name
 
   configuration {
     url          = each.value.url
@@ -84,7 +131,7 @@ resource "github_repository_webhook" "this" {
 resource "github_actions_secret" "this" {
   for_each = var.secrets
 
-  repository      = github_repository.this.name
+  repository      = local.repo.name
   secret_name     = each.key
   plaintext_value = each.value
 }

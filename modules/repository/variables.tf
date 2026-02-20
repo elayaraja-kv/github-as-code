@@ -9,6 +9,18 @@ variable "github_owner" {
   type        = string
 }
 
+# ─── Lifecycle ──────────────────────────────────────────────────────────────
+
+variable "prevent_destroy" {
+  description = <<-EOT
+    Prevent accidental deletion of this repository via Terraform.
+    To switch an existing repo from true → false, first run:
+      terraform state mv 'github_repository.this[0]' 'github_repository.unprotected[0]'
+  EOT
+  type    = bool
+  default = true
+}
+
 # ─── Repository settings ────────────────────────────────────────────────────
 
 variable "name" {
