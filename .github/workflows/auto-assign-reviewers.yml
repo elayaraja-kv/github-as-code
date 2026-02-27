@@ -25,13 +25,17 @@ jobs:
             // Don't request review from the PR author
             const reviewers = defaultReviewers.filter(r => r !== prAuthor);
 
+            // Team reviewers only work on org repos, not personal repos
+            const ownerData = await github.rest.users.getByUsername({ username: context.repo.owner });
+            const isOrg = ownerData.data.type === 'Organization';
+
             await github.rest.pulls.requestReviewers({
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: context.issue.number,
               reviewers: reviewers.length > 0 ? reviewers : undefined,
-              team_reviewers: defaultTeamReviewers
+              team_reviewers: isOrg ? defaultTeamReviewers : []
             });
 
             console.log(`Assigned reviewers: ${reviewers.join(', ')}`);
-            console.log(`Assigned team reviewers: ${defaultTeamReviewers.join(', ')}`);
+            console.log(`Assigned team reviewers: ${isOrg ? defaultTeamReviewers.join(', ') : 'none (personal repo)'}`);
