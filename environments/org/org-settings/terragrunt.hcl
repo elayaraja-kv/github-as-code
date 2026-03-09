@@ -7,7 +7,7 @@ terraform {
 }
 
 inputs = {
-  name          = "3es"
+  name          = "nz3es"
   billing_email = "elayaraja.kv@3es.nz"
   company       = "NZ3ES Limited"
   location      = "New Zealand"
