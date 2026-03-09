@@ -8,6 +8,8 @@ jobs:
   assign-reviewers:
     name: Assign Default Reviewers
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     if: github.event.pull_request.draft == false
     steps:
       - name: Request reviewers
