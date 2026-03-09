@@ -1,3 +1,3 @@
 locals {
-  github_owner = "NZ3ES-Limited"
+  github_owner = "nz3es"
 }
