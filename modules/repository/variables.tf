@@ -137,3 +137,11 @@ variable "secrets" {
   type        = map(string)
   default     = {}
 }
+
+# ─── Tag retention ──────────────────────────────────────────────────────────
+
+variable "max_tags" {
+  description = "Maximum number of tags to retain (sorted by creation date, oldest deleted first). Set to null to disable cleanup."
+  type        = number
+  default     = null
+}

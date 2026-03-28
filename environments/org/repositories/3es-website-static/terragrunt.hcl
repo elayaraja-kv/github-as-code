@@ -24,4 +24,5 @@ inputs = {
   allow_rebase_merge     = true
   delete_branch_on_merge = true
   vulnerability_alerts   = true
+  max_tags               = 3
 }
