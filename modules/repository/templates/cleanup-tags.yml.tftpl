@@ -1,0 +1,31 @@
+name: Cleanup Old Tags
+
+on:
+  push:
+    tags:
+      - "**"
+  workflow_dispatch:
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Delete old tags, keep last ${max_tags}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          MAX_TAGS: "${max_tags}"
+        run: |
+          tags=$(gh api repos/$REPO/tags --paginate --jq '.[].name')
+          total=$(echo "$tags" | wc -l | tr -d ' ')
+          to_delete=$((total - MAX_TAGS))
+          if [ "$to_delete" -le 0 ]; then
+            echo "Only $total tag(s) exist, nothing to delete."
+            exit 0
+          fi
+          echo "$tags" | tail -n "$to_delete" | while read tag; do
+            echo "Deleting tag: $tag"
+            gh api -X DELETE repos/$REPO/git/refs/tags/$tag
+          done

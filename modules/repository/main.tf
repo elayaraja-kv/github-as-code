@@ -135,3 +135,22 @@ resource "github_actions_secret" "this" {
   secret_name     = each.key
   plaintext_value = each.value
 }
+
+# ─── Tag retention workflow ──────────────────────────────────────────────────
+
+resource "github_repository_file" "tag_cleanup" {
+  count = var.max_tags != null ? 1 : 0
+
+  repository = local.repo.name
+  branch     = "main"
+  file       = ".github/workflows/cleanup-tags.yml"
+  content = templatefile("${path.module}/templates/cleanup-tags.yml.tftpl", {
+    max_tags = var.max_tags
+  })
+  commit_message      = "chore: manage tag cleanup workflow (keep last ${var.max_tags})"
+  overwrite_on_create = true
+
+  lifecycle {
+    ignore_changes = [commit_sha]
+  }
+}
